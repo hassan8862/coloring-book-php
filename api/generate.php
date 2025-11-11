@@ -27,7 +27,7 @@ if (empty($prompt)) {
 
 // === Hugging Face API Setup ===
 $model = 'MrHup/coloring-book'; // Great for coloring books
-$api_url = "https://api-inference.huggingface.co/models/$model";
+$api_url = "https://router.huggingface.co/hf-inference/models/$model";
 
 $images = [];
 $tmp_dir = sys_get_temp_dir();

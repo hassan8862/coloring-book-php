@@ -1,16 +1,17 @@
 <?php
 header('Content-Type: application/json');
 
-// === Use getenv() — more reliable on Vercel ===
+// === Use getenv() — reliable on Vercel ===
 $HF_TOKEN = getenv('HF_TOKEN') ?: '';
 
-// === Debug: Log token status (remove later) ===
-error_log("HF_TOKEN: " . ($HF_TOKEN ? 'LOADED (' . substr($HF_TOKEN, 0, 10) . '...)' : 'MISSING'));
-
 if (!$HF_TOKEN) {
+    error_log("ERROR: HF_TOKEN not set");
     echo json_encode(['error' => 'HF_TOKEN not set']);
     exit;
 }
+
+// === Debug: Log token loaded ===
+error_log("HF_TOKEN loaded: " . substr($HF_TOKEN, 0, 10) . '...');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['error' => 'POST required']);
@@ -25,9 +26,9 @@ if (empty($prompt)) {
     exit;
 }
 
-// === Hugging Face API Setup ===
-$model = 'MrHup/coloring-book'; // Great for coloring books
-$api_url = "https://router.huggingface.co/hf-inference/models/$model";
+// === WORKING MODEL: dreamlike-photoreal-2.0 (fully deployed on HF API) ===
+$model = 'dreamlike-art/dreamlike-photoreal-2.0';
+$api_url = "https://api-inference.huggingface.co/models/$model";
 
 $images = [];
 $tmp_dir = sys_get_temp_dir();
@@ -36,7 +37,8 @@ $pdf_path = "$tmp_dir/$pdf_name";
 
 // === Generate Images ===
 for ($i = 1; $i <= $pages; $i++) {
-    $full_prompt = "$prompt, coloring book page $i, black and white line art, thick outlines, no shading, printable, high contrast";
+    // === PROMPT: Optimized for clean line art ===
+    $full_prompt = "$prompt coloring book page $i, lineart, black and white, no color, thick black outlines, high contrast, clean lines, printable, intricate details, no shading, no background";
 
     $ch = curl_init($api_url);
     curl_setopt_array($ch, [
@@ -47,56 +49,65 @@ for ($i = 1; $i <= $pages; $i++) {
             "Content-Type: application/json"
         ],
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 60,
-        CURLOPT_USERAGENT => 'Vercel-PHP-Coloring-Book/1.0'
+        CURLOPT_TIMEOUT => 90,
+        CURLOPT_USERAGENT => 'ColoringBook-PHP/1.0'
     ]);
 
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    // === DEBUG: Log response ===
-    error_log("Page $i | HTTP: $http_code | Response: " . substr($response, 0, 300));
+    // === DEBUG LOGS ===
+    error_log("Page $i | HTTP: $http_code | Response preview: " . substr($response, 0, 300));
 
     if ($http_code !== 200) {
         error_log("HF API failed (HTTP $http_code) for page $i");
-        sleep(3);
+        sleep(5);
         continue;
     }
 
     $img_data = json_decode($response, true);
 
-    // === Fix: HF returns array [ { "generated_image": "data:..." } ] ===
-    if (is_array($img_data) && isset($img_data[0]['generated_image'])) {
-        $img_b64 = $img_data[0]['generated_image'];
-        $img_bin = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $img_b64));
-
-        if ($img_bin === false) {
-            error_log("Base64 decode failed for page $i");
-            continue;
+    // === PARSE IMAGE (supports 'generated_image' or 'image') ===
+    $img_b64 = null;
+    if (is_array($img_data)) {
+        if (isset($img_data[0]['generated_image'])) {
+            $img_b64 = $img_data[0]['generated_image'];
+        } elseif (isset($img_data[0]['image'])) {
+            $img_b64 = $img_data[0]['image'];
         }
-
-        $img_file = "$tmp_dir/page_$i.png";
-        if (file_put_contents($img_file, $img_bin)) {
-            $images[] = $img_file;
-            error_log("Saved image: $img_file");
-        } else {
-            error_log("Failed to save image: $img_file");
-        }
-    } else {
-        error_log("Invalid HF response format for page $i: " . substr($response, 0, 200));
     }
 
-    sleep(4); // Respect rate limits (free tier)
+    if (!$img_b64) {
+        error_log("No image data for page $i: " . substr($response, 0, 200));
+        continue;
+    }
+
+    $img_bin = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $img_b64));
+
+    if ($img_bin === false) {
+        error_log("Base64 decode failed for page $i");
+        continue;
+    }
+
+    $img_file = "$tmp_dir/page_$i.png";
+    if (file_put_contents($img_file, $img_bin)) {
+        $images[] = $img_file;
+        error_log("Saved image: $img_file | Size: " . number_format(strlen($img_bin)) . " bytes");
+    } else {
+        error_log("Failed to save: $img_file");
+    }
+
+    sleep(5); // Respect free tier rate limits
 }
 
-// === Check if any images were generated ===
+// === NO IMAGES? ===
 if (empty($images)) {
-    echo json_encode(['error' => 'No images generated. Try a simpler prompt or wait a minute.']);
+    echo json_encode(['error' => 'No images generated. Try a simpler prompt or wait 1 minute.']);
     exit;
 }
 
-// === Generate PDF with mPDF ===
+// === GENERATE PDF with mPDF ===
 require_once __DIR__ . '/../vendor/autoload.php';
 
 try {
@@ -106,34 +117,37 @@ try {
         'margin_left' => 5,
         'margin_right' => 5,
         'margin_top' => 5,
-        'margin_bottom' => 5
+        'margin_bottom' => 5,
+        'tempDir' => $tmp_dir
     ]);
 
     foreach ($images as $img) {
         $mpdf->AddPage();
-        $mpdf->Image($img, 0, 0, 200, 277, 'png', '', true, false); // Full A4
-        @unlink($img); // Clean up
+        $mpdf->Image($img, 0, 0, 200, 277, 'png', '', true, false);
+        @unlink($img); // Clean up image
     }
 
     $mpdf->Output($pdf_path, 'F');
+    error_log("PDF created: $pdf_path");
 } catch (Exception $e) {
     error_log("mPDF Error: " . $e->getMessage());
     echo json_encode(['error' => 'PDF generation failed']);
     exit;
 }
 
-// === Return Download URL ===
+// === RETURN DOWNLOAD LINK ===
 $download_url = "/api/download.php?file=" . urlencode(basename($pdf_path));
 echo json_encode([
     'success' => true,
     'download_url' => $download_url,
-    'pages' => count($images)
+    'pages' => count($images),
+    'prompt' => $prompt
 ]);
 
-// === Optional: Clean up PDF after 10 minutes ===
+// === Auto-delete PDF after 10 minutes ===
 register_shutdown_function(function () use ($pdf_path) {
     if (file_exists($pdf_path)) {
-        sleep(600); // 10 minutes
+        sleep(600);
         @unlink($pdf_path);
     }
 });

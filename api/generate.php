@@ -7,6 +7,7 @@ if (!$HF_TOKEN) {
     echo json_encode(['error' => 'HF_TOKEN not set']);
     exit;
 }
+echo $HF_TOKEN;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['error' => 'POST required']);

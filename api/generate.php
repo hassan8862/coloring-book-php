@@ -1,5 +1,4 @@
 <?php
-ob_clean();  // Clear any output buffer
 header('Content-Type: application/json; charset=utf-8');
 
 

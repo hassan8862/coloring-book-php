@@ -30,30 +30,7 @@
 
   <div id="status"></div>
   <div id="downloads"></div>
-<button onclick="mergePDFs()">Merge into PDF</button>
 
-<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-<script>
-async function mergePDFs() {
-  const pdfDoc = await PDFLib.PDFDocument.create();
-  const links = document.querySelectorAll('#downloads a');
-  
-  for (let link of links) {
-    const arrayBuffer = await fetch(link.href).then(res => res.arrayBuffer());
-    const imgDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-    const pages = await pdfDoc.copyPages(imgDoc, imgDoc.getPageIndices());
-    pages.forEach(p => pdfDoc.addPage(p));
-  }
-
-  const pdfBytes = await pdfDoc.save();
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'coloring-book.pdf';
-  a.click();
-}
-</script>
   <script>
     document.getElementById('generateForm').onsubmit = (e) => {
       e.preventDefault();

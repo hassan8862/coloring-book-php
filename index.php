@@ -28,30 +28,43 @@
 
   <div id="status"></div>
 
-  <script>
-    document.getElementById('generateForm').onsubmit = async (e) => {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const status = document.getElementById('status');
-      status.style.display = 'block';
-      status.innerHTML = 'Generating... This may take 1-3 minutes.';
+<script>
+  document.getElementById('generateForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const status = document.getElementById('status');
+    status.style.display = 'block';
+    status.innerHTML = 'Generating... This may take 1-3 minutes.';
 
+    try {
+      const res = await fetch('/api/generate.php', {
+        method: 'POST',
+        body: formData
+      });
+
+      // Log raw response for debugging
+      const text = await res.text();
+      console.log('Raw response:', text);
+
+      let data;
       try {
-        const res = await fetch('/api/generate.php', {
-          method: 'POST',
-          body: formData
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          status.innerHTML = `Success! <a href="${data.download_url}" download>Download PDF</a>`;
-        } else {
-          status.innerHTML = 'Error: ' + (data.error || 'Unknown');
-        }
-      } catch (err) {
-        status.innerHTML = 'Network error. Try again.';
+        data = JSON.parse(text);
+      } catch (parseErr) {
+        console.error('JSON parse failed:', parseErr);
+        status.innerHTML = 'Server error: Invalid response. Check console.';
+        return;
       }
-    };
-  </script>
+
+      if (data.success) {
+        status.innerHTML = `Success! <a href="${data.download_url}" download>Download PDF</a>`;
+      } else {
+        status.innerHTML = 'Error: ' + (data.error || 'Unknown');
+      }
+    } catch (err) {
+        console.error('Fetch error:', err);
+        status.innerHTML = 'Network error. Try again.';
+    }
+  };
+</script>
 </body>
 </html>

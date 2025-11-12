@@ -1,5 +1,7 @@
 <?php
-header('Content-Type: application/json');
+ob_clean();  // Clear any output buffer
+header('Content-Type: application/json; charset=utf-8');
+
 
 // === STEP 1: LOG TOKEN STATUS ===
 $HF_TOKEN = getenv('HF_TOKEN') ?: '';
@@ -158,4 +160,5 @@ echo json_encode([
     'download_url' => "/api/download.php?file=" . urlencode(basename($pdf_path)),
     'pages' => count($images)
 ]);
+exit;  // Critical!
 ?>

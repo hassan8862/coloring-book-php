@@ -1,5 +1,6 @@
 <?php
-// api/generate.php – SAFE VERSION
+// api/generate.php – FINAL WORKING VERSION (FREE & FAST)
+
 $HF_TOKEN = getenv('HF_TOKEN') ?: '';
 if (empty($HF_TOKEN)) {
     http_response_code(500);
@@ -13,14 +14,21 @@ if (empty($prompt)) {
     exit('Prompt required');
 }
 
+// === FREE MODEL: FLUX.1-schnell ===
 $model = 'black-forest-labs/FLUX.1-schnell';
 $api_url = 'https://router.huggingface.co/hf-inference/models/' . $model;
 
 $full_prompt = "$prompt, coloring book page $page, line art, bold black outlines, white background, no shading, high contrast, printable, clean, vector style";
+
 $payload = [
     'inputs' => $full_prompt,
-    'parameters' => ['width'=>768,'height'=>768,'num_inference_steps'=>25,'guidance_scale'=>7.5],
-    'options' => ['wait_for_model'=>true]
+    'parameters' => [
+        'width' => 768,
+        'height' => 768,
+        'num_inference_steps' => 4,
+        'guidance_scale' => 0.0
+    ],
+    'options' => ['wait_for_model' => true]
 ];
 
 $ch = curl_init($api_url);
@@ -47,7 +55,7 @@ curl_close($ch);
 // === LOG FOR DEBUG ===
 error_log("HF Response | HTTP: $http_code | Type: $content_type | Size: " . strlen($body));
 
-// === CHECK IF VALID IMAGE ===
+// === VALIDATE RESPONSE ===
 if ($http_code !== 200) {
     error_log("HF API ERROR: HTTP $http_code");
     error_log("Response: " . substr($body, 0, 500));
@@ -59,7 +67,7 @@ if (strpos($content_type, 'image/') === false) {
     error_log("NOT AN IMAGE: $content_type");
     error_log("Response preview: " . substr($body, 0, 200));
     http_response_code(502);
-    exit("AI returned non-image (check token/model)");
+    exit("AI returned non-image");
 }
 
 if (strlen($body) < 10000) {
@@ -68,25 +76,9 @@ if (strlen($body) < 10000) {
     exit("Generated image too small");
 }
 
-// === SAFE PNG COMPRESSION ===
-$img = @imagecreatefromstring($body);
-if ($img === false) {
-    error_log("imagecreatefromstring() FAILED – raw output");
-    // Fallback: send raw image
-    header('Content-Type: image/png');
-    header('Content-Disposition: attachment; filename="page-'.$page.'.png"');
-    echo $body;
-    exit;
-}
-
-ob_start();
-imagepng($img, null, 6);  // compression level 6
-$compressed = ob_get_clean();
-imagedestroy($img);
-
-// === SEND COMPRESSED PNG ===
+// === SEND PNG (no compression needed – FLUX is fast) ===
 header('Cache-Control: public, max-age=86400');
 header('Content-Type: image/png');
 header('Content-Disposition: attachment; filename="page-'.$page.'.png"');
-echo $compressed;
+echo $body;
 exit;

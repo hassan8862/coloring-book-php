@@ -13,14 +13,13 @@ if (empty($prompt)) {
     exit('Prompt required');
 }
 
-$model = 'stabilityai/stable-diffusion-xl-base-1.0';
+$model = 'black-forest-labs/FLUX.1-schnell';
 $api_url = 'https://router.huggingface.co/hf-inference/models/' . $model;
 
-$full_prompt = "$prompt, coloring book page $page, lineart, black and white, thick outlines, no shading, high contrast, printable, bold lines";
-
+$full_prompt = "$prompt, coloring book page $page, line art, bold black outlines, white background, no shading, high contrast, printable, clean, vector style";
 $payload = [
     'inputs' => $full_prompt,
-    'parameters' => ['width'=>1024,'height'=>1024,'num_inference_steps'=>25,'guidance_scale'=>7.5],
+    'parameters' => ['width'=>768,'height'=>768,'num_inference_steps'=>25,'guidance_scale'=>7.5],
     'options' => ['wait_for_model'=>true]
 ];
 

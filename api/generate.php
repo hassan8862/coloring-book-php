@@ -6,9 +6,9 @@ $HF_TOKEN = getenv('HF_TOKEN') ?: '';
 if (!$HF_TOKEN) {
     echo json_encode(['error' => 'HF_TOKEN not set']);
     exit;
-}
-echo $HF_TOKEN;
-
+} ?>
+<p> mytoken:  <?php echo $HF_TOKEN ?></p>
+<?php
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['error' => 'POST required']);
     exit;

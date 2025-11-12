@@ -126,30 +126,32 @@ error_log("SUCCESS: Generated " . count($images) . " images. Creating PDF...");
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// === mPDF: Use /tmp for temp files ===
 $mpdf_config = [
     'format' => 'A4',
     'margin' => 5,
     'tempDir' => '/tmp/mpdf'
 ];
-
 $mpdf = new \Mpdf\Mpdf($mpdf_config);
-
-// Ensure temp dir exists
 @mkdir('/tmp/mpdf', 0755, true);
 
 foreach ($images as $img) {
     $mpdf->AddPage();
-    $mpdf->Image($img, 10, 10, 190, 277);  // Fit to A4
+    $mpdf->Image($img, 10, 10, 190, 277);
     @unlink($img);
 }
 
+$pdf_path = "/tmp/$pdf_name";
 $mpdf->Output($pdf_path, 'F');
 error_log("PDF created: $pdf_path");
 
+// === SEND PDF AS BASE64 DATA URL ===
+$pdf_base64 = base64_encode(file_get_contents($pdf_path));
+$download_url = 'data:application/pdf;base64,' . $pdf_base64;
+
 echo json_encode([
     'success' => true,
-    'download_url' => "/api/download.php?file=" . urlencode(basename($pdf_path)),
+    'download_url' => $download_url,
     'pages' => count($images)
 ]);
+@unlink($pdf_path);
 exit;

@@ -57,13 +57,13 @@
         }
 
         if (data.success) {
-          status.innerHTML = `
-            Success! Generated ${data.pages} page(s).<br>
-            <a href="${data.download_url}" download>
-              Download PDF Now
-            </a>
-          `;
-        } else {
+  status.innerHTML = `
+    Success! Generated ${data.pages} page(s).<br>
+    <a href="${data.download_url}" download="coloring-book.pdf">
+      Download PDF Now
+    </a>
+  `;
+} else {
           status.innerHTML = 'Error: ' + (data.error || 'Unknown error');
         }
       } catch (err) {

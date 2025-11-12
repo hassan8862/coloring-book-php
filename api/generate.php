@@ -1,13 +1,12 @@
 <?php
 header('Content-Type: application/json');
 
-// === Use Vercel env var ===
+// Use Vercel env var
 $HF_TOKEN = getenv('HF_TOKEN') ?: '';
 if (!$HF_TOKEN) {
     echo json_encode(['error' => 'HF_TOKEN not set']);
     exit;
 }
-
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['error' => 'POST required']);
@@ -21,7 +20,7 @@ if (empty($prompt)) {
     exit;
 }
 
-// === EXACT SAME AS YOUR WORKING CURL ===
+// Correct API URL
 $model = 'stabilityai/stable-diffusion-xl-base-1.0';
 $api_url = 'https://router.huggingface.co/hf-inference/models/' . $model;
 
@@ -33,13 +32,26 @@ $pdf_path = "$tmp_dir/$pdf_name";
 for ($i = 1; $i <= $pages; $i++) {
     $full_prompt = "$prompt, coloring book page $i, lineart, black and white, thick outlines, no shading, high contrast, printable";
 
+    // Payload with parameters for better control
+    $payload = [
+        'inputs' => $full_prompt,
+        'parameters' => [
+            'width' => 1024,
+            'height' => 1024,
+            'num_inference_steps' => 30,  // Adjust for quality/speed
+            'guidance_scale' => 7.5
+        ],
+        'options' => ['wait_for_model' => true]  // Wait if model is loading
+    ];
+
     $ch = curl_init($api_url);
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => json_encode(['inputs' => $full_prompt]),
+        CURLOPT_POSTFIELDS => json_encode($payload),
         CURLOPT_HTTPHEADER => [
             "Authorization: Bearer $HF_TOKEN",
-            "Content-Type: application/json"
+            "Content-Type: application/json",
+            "Accept: image/png"  // Ensure binary response
         ],
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 120
@@ -52,30 +64,32 @@ for ($i = 1; $i <= $pages; $i++) {
     error_log("Page $i | HTTP: $http_code");
 
     if ($http_code !== 200) {
-        error_log("API Error: $response");
+        $error_data = json_decode($response, true);
+        $error_msg = $error_data['error'] ?? 'Unknown error';
+        error_log("API Error for page $i: $error_msg | Response: " . substr($response, 0, 200));
+        if ($http_code === 503 || $http_code === 429) {  // Retry on rate limit or model loading
+            sleep(10);
+            $i--;  // Retry this page
+            continue;
+        }
         sleep(5);
         continue;
     }
 
-    $img_data = json_decode($response, true);
-    $img_b64 = $img_data[0]['generated_image'] ?? null;
-
-    if (!$img_b64) {
-        error_log("No image for page $i: " . substr($response, 0, 200));
-        continue;
-    }
-
-    $img_bin = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $img_b64));
-    if ($img_bin && file_put_contents("$tmp_dir/page_$i.png", $img_bin)) {
+    // Response is binary image data
+    $img_bin = $response;
+    if (strlen($img_bin) > 0 && file_put_contents("$tmp_dir/page_$i.png", $img_bin)) {
         $images[] = "$tmp_dir/page_$i.png";
         error_log("Saved page $i");
+    } else {
+        error_log("Empty image data for page $i");
     }
 
-    sleep(3);
+    sleep(3);  // Rate limit buffer
 }
 
 if (empty($images)) {
-    echo json_encode(['error' => 'No images generated. Try again in 1 minute.']);
+    echo json_encode(['error' => 'No images generated. Check token/URL or try again later.']);
     exit;
 }
 
@@ -83,7 +97,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $mpdf = new \Mpdf\Mpdf(['format' => 'A4', 'margin' => 5]);
 foreach ($images as $img) {
     $mpdf->AddPage();
-    $mpdf->Image($img, 0, 0, 200, 277);
+    $mpdf->Image($img, 0, 0, 210, 297);  // Full A4 size in mm (adjust if needed)
     @unlink($img);
 }
 $mpdf->Output($pdf_path, 'F');

@@ -114,11 +114,11 @@
 
             <div id="downloads" class="row mt-4"></div>
 
-            <div id="mergeSection" class="text-center mt-3" style="display:none;">
+            <!-- <div id="mergeSection" class="text-center mt-3" style="display:none;">
               <button id="mergeBtn" class="btn btn-outline-primary">
                 <i class="fas fa-file-pdf me-1"></i> Merge All into One PDF
               </button>
-            </div>
+            </div> -->
           </div>
         </div>
 
@@ -138,8 +138,8 @@
     const form = document.getElementById('generateForm');
     const status = document.getElementById('status');
     const downloads = document.getElementById('downloads');
-    const mergeSection = document.getElementById('mergeSection');
-    const mergeBtn = document.getElementById('mergeBtn');
+    // const mergeSection = document.getElementById('mergeSection');
+    // const mergeBtn = document.getElementById('mergeBtn');
 
     form.addEventListener('submit', e => {
       e.preventDefault();
@@ -148,7 +148,7 @@
 
       status.style.display = 'block';
       downloads.innerHTML = '';
-      mergeSection.style.display = 'none';
+      // mergeSection.style.display = 'none';
 
       let generated = 0;
       const urls = [];
@@ -172,42 +172,42 @@
           generated++;
           if (generated === pages) {
             status.innerHTML = `<i class="fas fa-check text-success"></i> All ${pages} pages ready!`;
-            mergeSection.style.display = 'block';
+            // mergeSection.style.display = 'block';
           }
         }, i * 400); // staggered UI update
       }
     });
 
     // ---------- Merge into single PDF (client-side) ----------
-    mergeBtn.addEventListener('click', async () => {
-      mergeBtn.disabled = true;
-      mergeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Merging…';
+    // mergeBtn.addEventListener('click', async () => {
+    //   mergeBtn.disabled = true;
+    //   mergeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Merging…';
 
-      const pdfDoc = await PDFLib.PDFDocument.create();
+    //   const pdfDoc = await PDFLib.PDFDocument.create();
 
-      const links = downloads.querySelectorAll('a');
-      for (let a of links) {
-        try {
-          const arrayBuffer = await fetch(a.href).then(r => r.arrayBuffer());
-          const imgDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-          const copiedPages = await pdfDoc.copyPages(imgDoc, imgDoc.getPageIndices());
-          copiedPages.forEach(p => pdfDoc.addPage(p));
-        } catch (err) {
-          console.error('Failed to load a page', err);
-        }
-      }
+    //   const links = downloads.querySelectorAll('a');
+    //   for (let a of links) {
+    //     try {
+    //       const arrayBuffer = await fetch(a.href).then(r => r.arrayBuffer());
+    //       const imgDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+    //       const copiedPages = await pdfDoc.copyPages(imgDoc, imgDoc.getPageIndices());
+    //       copiedPages.forEach(p => pdfDoc.addPage(p));
+    //     } catch (err) {
+    //       console.error('Failed to load a page', err);
+    //     }
+    //   }
 
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const dl = document.createElement('a');
-      dl.href = url;
-      dl.download = 'coloring-book.pdf';
-      dl.click();
+    //   const pdfBytes = await pdfDoc.save();
+    //   const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    //   const url = URL.createObjectURL(blob);
+    //   const dl = document.createElement('a');
+    //   dl.href = url;
+    //   dl.download = 'coloring-book.pdf';
+    //   dl.click();
 
-      mergeBtn.disabled = false;
-      mergeBtn.innerHTML = '<i class="fas fa-file-pdf me-1"></i> Merge All into One PDF';
-    });
+    //   mergeBtn.disabled = false;
+    //   mergeBtn.innerHTML = '<i class="fas fa-file-pdf me-1"></i> Merge All into One PDF';
+    // });
   </script>
 </body>
 </html>

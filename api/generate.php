@@ -1,21 +1,13 @@
 <?php
 header('Content-Type: application/json');
 
-// === GET TOKEN FROM VERCEL ENV VAR ONLY ===
+// === Use Vercel env var ===
 $HF_TOKEN = getenv('HF_TOKEN') ?: '';
-
-/* === DEBUG: PRINT TOKEN TO SCREEN (REMOVE AFTER TESTING!) === */
-echo "<pre>DEBUG: HF_TOKEN = $HF_TOKEN</pre>";
-echo "<pre>DEBUG: Source = Vercel Environment Variable</pre>";
-exit;
-/* =============================================================== */
-
-// === STOP HERE FOR DEBUG (REMOVE THE 4 LINES ABOVE AFTER TESTING!) ===
-
 if (!$HF_TOKEN) {
-    echo json_encode(['error' => 'HF_TOKEN not set in Vercel']);
+    echo json_encode(['error' => 'HF_TOKEN not set']);
     exit;
 }
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['error' => 'POST required']);
@@ -29,7 +21,7 @@ if (empty($prompt)) {
     exit;
 }
 
-// === FINAL WORKING MODEL & URL ===
+// === EXACT SAME AS YOUR WORKING CURL ===
 $model = 'stabilityai/stable-diffusion-xl-base-1.0';
 $api_url = 'https://router.huggingface.co/hf-inference/models/' . $model;
 
@@ -39,7 +31,7 @@ $pdf_name = 'coloring-book-' . uniqid() . '.pdf';
 $pdf_path = "$tmp_dir/$pdf_name";
 
 for ($i = 1; $i <= $pages; $i++) {
-    $full_prompt = "$prompt, coloring book page $i, lineart, black and white, thick outlines, no shading, high contrast, clean lines, printable";
+    $full_prompt = "$prompt, coloring book page $i, lineart, black and white, thick outlines, no shading, high contrast, printable";
 
     $ch = curl_init($api_url);
     curl_setopt_array($ch, [

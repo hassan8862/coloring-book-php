@@ -50,19 +50,14 @@
       transition: background .2s;
     }
     .btn-primary:hover { background: var(--primary-dark); }
-    .page-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: .5rem;
-      padding: .5rem 1rem;
-      background: var(--gray-100);
+    .btn-secondary {
+      background: var(--gray-200);
+      border: none;
       border-radius: .5rem;
-      text-decoration: none;
-      color: var(--gray-800);
       font-weight: 500;
       transition: background .2s;
     }
-    .page-btn:hover { background: var(--gray-200); }
+    .btn-secondary:hover { background: var(--gray-100); }
     .spinner {
       width: 1.2rem;
       height: 1.2rem;
@@ -73,7 +68,23 @@
       display: inline-block;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #downloads .col { margin-bottom: .75rem; }
+    #downloads .col { margin-bottom: 1.5rem; }
+    .preview-card {
+      border: 1px solid var(--gray-200);
+      border-radius: .75rem;
+      overflow: hidden;
+      background: white;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    .preview-img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .preview-footer {
+      padding: .75rem;
+      text-align: center;
+    }
     footer { margin-top: 2rem; font-size: .85rem; color: #6c757d; }
   </style>
 </head>
@@ -81,7 +92,7 @@
 <body>
   <div class="container">
     <div class="row justify-content-center">
-      <div class="col-lg-6 col-md-8">
+      <div class="col-lg-8 col-md-10">
 
         <div class="card">
           <div class="card-header">
@@ -160,13 +171,29 @@
 
           const col = document.createElement('div');
           col.className = 'col-12 col-sm-6 col-md-4';
-          const link = document.createElement('a');
-          link.href = url;
-          link.className = 'page-btn w-100 text-center';
-          link.target = '_blank';
-          link.download = `page-${i}.png`;
-          link.innerHTML = `<i class="fas fa-image"></i> Page ${i}`;
-          col.appendChild(link);
+
+          const previewCard = document.createElement('div');
+          previewCard.className = 'preview-card';
+
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = `Page ${i}`;
+          img.className = 'preview-img';
+          img.loading = 'lazy'; // Lazy load to optimize
+
+          const footer = document.createElement('div');
+          footer.className = 'preview-footer';
+
+          const downloadBtn = document.createElement('a');
+          downloadBtn.href = url;
+          downloadBtn.className = 'btn btn-secondary w-100';
+          downloadBtn.download = `page-${i}.png`;
+          downloadBtn.innerHTML = `<i class="fas fa-download me-1"></i> Download Page ${i}`;
+
+          footer.appendChild(downloadBtn);
+          previewCard.appendChild(img);
+          previewCard.appendChild(footer);
+          col.appendChild(previewCard);
           downloads.appendChild(col);
 
           generated++;
@@ -174,7 +201,7 @@
             status.innerHTML = `<i class="fas fa-check text-success"></i> All ${pages} pages ready!`;
             // mergeSection.style.display = 'block';
           }
-        }, i * 400); // staggered UI update
+        }, i * 400); // Staggered UI update to prevent overwhelming the API
       }
     });
 
@@ -185,13 +212,13 @@
 
     //   const pdfDoc = await PDFLib.PDFDocument.create();
 
-    //   const links = downloads.querySelectorAll('a');
-    //   for (let a of links) {
+    //   const imgs = downloads.querySelectorAll('img');
+    //   for (let img of imgs) {
     //     try {
-    //       const arrayBuffer = await fetch(a.href).then(r => r.arrayBuffer());
-    //       const imgDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-    //       const copiedPages = await pdfDoc.copyPages(imgDoc, imgDoc.getPageIndices());
-    //       copiedPages.forEach(p => pdfDoc.addPage(p));
+    //       const arrayBuffer = await fetch(img.src).then(r => r.arrayBuffer());
+    //       const pngImage = await pdfDoc.embedPng(arrayBuffer);
+    //       const page = pdfDoc.addPage([pngImage.width, pngImage.height]);
+    //       page.drawImage(pngImage, { x: 0, y: 0, width: pngImage.width, height: pngImage.height });
     //     } catch (err) {
     //       console.error('Failed to load a page', err);
     //     }

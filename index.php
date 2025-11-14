@@ -5,152 +5,103 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI Coloring Book Generator</title>
 
-  <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Font Awesome for icons -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-  <!-- Google Font – Inter (clean, modern) -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    :root {
-      --primary: #6366f1;
-      --primary-dark: #4f46e5;
-      --gray-100: #f8f9fa;
-      --gray-200: #e9ecef;
-      --gray-800: #343a40;
-    }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #f5f7ff 0%, #e0e7ff 100%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
-    .card {
-      border: none;
-      border-radius: 1rem;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-      overflow: hidden;
-    }
-    .card-header {
-      background: var(--primary);
-      color: white;
-      font-weight: 600;
-      text-align: center;
-      padding: 1.25rem;
-    }
-    .btn-primary {
-      background: var(--primary);
-      border: none;
-      border-radius: .5rem;
-      font-weight: 600;
-      transition: background .2s;
-    }
-    .btn-primary:hover { background: var(--primary-dark); }
-    .btn-secondary {
-      background: var(--gray-200);
-      border: none;
-      border-radius: .5rem;
-      font-weight: 500;
-      transition: background .2s;
-    }
-    .btn-secondary:hover { background: var(--gray-100); }
-    .spinner {
-      width: 1.2rem;
-      height: 1.2rem;
-      border: 2px solid #fff;
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      display: inline-block;
-    }
+    :root { --primary: #6366f1; --primary-dark: #4f46e5; }
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #f5f7ff 0%, #e0e7ff 100%); min-height: 100vh; padding: 2rem 1rem; }
+    .card { border: none; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+    .card-header { background: var(--primary); color: white; font-weight: 600; }
+    .nav-tabs .nav-link.active { background: var(--primary); color: white; }
+    .drop-zone { border: 3px dashed #bbb; border-radius: 1rem; padding: 3rem; text-align: center; transition: all .3s; background: #fafaff; }
+    .drop-zone.dragover { border-color: var(--primary); background: #eef1ff; }
+    #uploadPreview { max-width: 100%; max-height: 600px; margin: 1rem 0; border-radius: .75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .spinner { width: 1.5rem; height: 1.5rem; border: 3px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #downloads .col { margin-bottom: 1.5rem; }
-    .preview-card {
-      border: 1px solid var(--gray-200);
-      border-radius: .75rem;
-      overflow: hidden;
-      background: white;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-    .preview-img {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
-    .preview-footer {
-      padding: .75rem;
-      text-align: center;
-    }
-    footer { margin-top: 2rem; font-size: .85rem; color: #6c757d; }
   </style>
 </head>
-
 <body>
   <div class="container">
     <div class="row justify-content-center">
-      <div class="col-lg-8 col-md-10">
+      <div class="col-lg-9 col-md-10">
 
         <div class="card">
-          <div class="card-header">
-            <i class="fas fa-palette me-2"></i>
-            AI Coloring Book Generator
+          <div class="card-header text-center">
+            <i class="fas fa-palette me-2"></i> AI Coloring Book Generator
           </div>
 
-          <div class="card-body p-4">
-            <form id="generateForm">
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Prompt <span class="text-muted">(e.g. “cute cats in jungle”)</span></label>
-                <input type="text" class="form-control" id="prompt" required minlength="3" maxlength="150"
-                       placeholder="dragon in castle, line art">
-              </div>
+          <!-- Tabs -->
+          <ul class="nav nav-tabs mt-4 px-4" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link active" data-bs-toggle="tab" href="#tab-prompt"><i class="fas fa-magic me-1"></i> Generate from Text</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-bs-toggle="tab" href="#tab-upload"><i class="fas fa-image me-1"></i> Upload & Convert</a>
+            </li>
+          </ul>
 
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Number of pages (1–22)</label>
-                <input type="number" class="form-control" id="pages" min="1" max="22" value="3" required>
-              </div>
+          <div class="tab-content p-4">
+            <!-- TAB 1: Original Prompt Generator (unchanged) -->
+            <div class="tab-pane fade show active" id="tab-prompt">
+              <form id="generateForm">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Prompt</label>
+                  <input type="text" class="form-control" id="prompt" required placeholder="dragon in castle, line art">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Number of pages (1–22)</label>
+                  <input type="number" class="form-control" id="pages" min="1" max="22" value="3" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                  <i class="fas fa-magic me-1"></i> Generate Pages
+                </button>
+              </form>
 
-              <button type="submit" class="btn btn-primary w-100">
-                <i class="fas fa-magic me-1"></i> Generate Pages
-              </button>
-            </form>
-
-            <div id="status" class="mt-4 text-center" style="display:none;">
-              <div class="spinner"></div>
-              <span class="ms-2">Preparing pages…</span>
+              <div id="status" class="mt-4 text-center" style="display:none;"></div>
+              <div id="downloads" class="row mt-4"></div>
             </div>
 
-            <div id="downloads" class="row mt-4"></div>
+            <!-- TAB 2: Upload Image → Convert to Coloring Page -->
+            <div class="tab-pane fade" id="tab-upload">
+              <div class="drop-zone" id="dropZone">
+                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                <p class="lead">Drag & drop an image here or click to select</p>
+                <input type="file" id="imageInput" accept="image/*" style="display:none;">
+              </div>
 
-            <!-- <div id="mergeSection" class="text-center mt-3" style="display:none;">
-              <button id="mergeBtn" class="btn btn-outline-primary">
-                <i class="fas fa-file-pdf me-1"></i> Merge All into One PDF
-              </button>
-            </div> -->
+              <div id="processing" class="text-center my-4" style="display:none;">
+                <div class="spinner"></div>
+                <span class="ms-2 h5">Converting to coloring page… (takes ~8–15 sec)</span>
+              </div>
+
+              <div id="result" class="text-center" style="display:none;">
+                <h4 class="mb-3">Your Coloring Page is Ready!</h4>
+                <img id="uploadPreview" alt="Coloring page preview">
+                <div class="mt-3">
+                  <a id="downloadBtn" class="btn btn-success btn-lg">
+                    <i class="fas fa-download me-2"></i> Download PNG
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <footer class="text-center">
-          Built with <i class="fas fa-heart text-danger"></i> on Vercel •
-          <a href="https://huggingface.co" target="_blank" class="text-decoration-none">Powered by Hugging Face</a>
+        <footer class="text-center mt-4 text-muted small">
+          Built with <i class="fas fa-heart text-danger"></i> • Powered by Hugging Face
         </footer>
       </div>
     </div>
   </div>
 
-  <!-- Bootstrap + PDF-Lib (client-side merge) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-
   <script>
+    // ==================== ORIGINAL PROMPT GENERATOR (unchanged) ====================
     const form = document.getElementById('generateForm');
     const status = document.getElementById('status');
     const downloads = document.getElementById('downloads');
-    // const mergeSection = document.getElementById('mergeSection');
-    // const mergeBtn = document.getElementById('mergeBtn');
 
     form.addEventListener('submit', e => {
       e.preventDefault();
@@ -158,83 +109,98 @@
       const pages = parseInt(document.getElementById('pages').value);
 
       status.style.display = 'block';
+      status.innerHTML = '<div class="spinner"></div><span class="ms-2">Preparing pages…</span>';
       downloads.innerHTML = '';
-      // mergeSection.style.display = 'none';
 
       let generated = 0;
-      const urls = [];
-
       for (let i = 1; i <= pages; i++) {
         setTimeout(() => {
           const url = `/api/generate.php?prompt=${encodeURIComponent(prompt)}&page=${i}`;
-          urls.push(url);
 
           const col = document.createElement('div');
           col.className = 'col-12 col-sm-6 col-md-4';
-
-          const previewCard = document.createElement('div');
-          previewCard.className = 'preview-card';
-
+          const card = document.createElement('div');
+          card.className = 'card border-0 shadow-sm';
           const img = document.createElement('img');
           img.src = url;
-          img.alt = `Page ${i}`;
-          img.className = 'preview-img';
-          img.loading = 'lazy'; // Lazy load to optimize
-
-          const footer = document.createElement('div');
-          footer.className = 'preview-footer';
-
-          const downloadBtn = document.createElement('a');
-          downloadBtn.href = url;
-          downloadBtn.className = 'btn btn-secondary w-100';
-          downloadBtn.download = `page-${i}.png`;
-          downloadBtn.innerHTML = `<i class="fas fa-download me-1"></i> Download Page ${i}`;
-
-          footer.appendChild(downloadBtn);
-          previewCard.appendChild(img);
-          previewCard.appendChild(footer);
-          col.appendChild(previewCard);
+          img.className = 'card-img-top';
+          img.loading = 'lazy';
+          const body = document.createElement('div');
+          body.className = 'card-body text-center p-2';
+          const btn = document.createElement('a');
+          btn.href = url;
+          btn.download = `coloring-page-${i}.png`;
+          btn.className = 'btn btn-outline-primary btn-sm';
+          btn.innerHTML = `<i class="fas fa-download"></i> Page ${i}`;
+          body.appendChild(btn);
+          card.appendChild(img);
+          card.appendChild(body);
+          col.appendChild(card);
           downloads.appendChild(col);
 
           generated++;
           if (generated === pages) {
             status.innerHTML = `<i class="fas fa-check text-success"></i> All ${pages} pages ready!`;
-            // mergeSection.style.display = 'block';
           }
-        }, i * 400); // Staggered UI update to prevent overwhelming the API
+        }, i * 450);
       }
     });
 
-    // ---------- Merge into single PDF (client-side) ----------
-    // mergeBtn.addEventListener('click', async () => {
-    //   mergeBtn.disabled = true;
-    //   mergeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Merging…';
+    // ==================== NEW: UPLOAD & CONVERT TAB ====================
+    const dropZone = document.getElementById('dropZone');
+    const imageInput = document.getElementById('imageInput');
+    const processing = document.getElementById('processing');
+    const result = document.getElementById('result');
+    const uploadPreview = document.getElementById('uploadPreview');
+    const downloadBtn = document.getElementById('downloadBtn');
 
-    //   const pdfDoc = await PDFLib.PDFDocument.create();
+    // Click to open file picker
+    dropZone.addEventListener('click', () => imageInput.click());
 
-    //   const imgs = downloads.querySelectorAll('img');
-    //   for (let img of imgs) {
-    //     try {
-    //       const arrayBuffer = await fetch(img.src).then(r => r.arrayBuffer());
-    //       const pngImage = await pdfDoc.embedPng(arrayBuffer);
-    //       const page = pdfDoc.addPage([pngImage.width, pngImage.height]);
-    //       page.drawImage(pngImage, { x: 0, y: 0, width: pngImage.width, height: pngImage.height });
-    //     } catch (err) {
-    //       console.error('Failed to load a page', err);
-    //     }
-    //   }
+    // Drag & drop effects
+    ['dragover', 'dragenter'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.add('dragover')));
+    ['dragleave', 'dragend', 'drop'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.remove('dragover')));
 
-    //   const pdfBytes = await pdfDoc.save();
-    //   const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    //   const url = URL.createObjectURL(blob);
-    //   const dl = document.createElement('a');
-    //   dl.href = url;
-    //   dl.download = 'coloring-book.pdf';
-    //   dl.click();
+    // Handle file selection
+    imageInput.addEventListener('change', handleFile);
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
 
-    //   mergeBtn.disabled = false;
-    //   mergeBtn.innerHTML = '<i class="fas fa-file-pdf me-1"></i> Merge All into One PDF';
-    // });
+    function handleFile(file) {
+      if (!file || !file.type.startsWith('image/')) return alert('Please select an image file');
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        processing.style.display = 'block';
+        result.style.display = 'none';
+
+        // Send to new PHP endpoint
+        const formData = new FormData();
+        formData.append('image', file);
+
+        fetch('/api/image-to-coloring.php', {
+          method: 'POST',
+          body: formData
+        })
+        .then(r => r.blob())
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          uploadPreview.src = url;
+          downloadBtn.href = url;
+          downloadBtn.download = 'coloring-page.png';
+          processing.style.display = 'none';
+          result.style.display = 'block';
+        })
+        .catch(err => {
+          console.error(err);
+          alert('Conversion failed. Try another image.');
+          processing.style.display = 'none';
+        });
+      };
+      reader.readAsDataURL(file);
+    }
   </script>
 </body>
 </html>

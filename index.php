@@ -65,11 +65,11 @@
 
             <!-- TAB 2: Upload Image → Convert to Coloring Page -->
             <div class="tab-pane fade" id="tab-upload">
-              <div class="drop-zone" id="dropZone">
-                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                <p class="lead">Drag & drop an image here or click to select</p>
-                <input type="file" id="imageInput" accept="image/*" style="display:none;">
-              </div>
+        <div class="drop-zone" id="dropZone">
+  <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+  <p class="lead">Drag & drop an image here<br>or <strong>click to select</strong></p>
+  <input type="file" id="imageInput" accept="image/*" hidden>
+</div>
 
               <div id="processing" class="text-center my-4" style="display:none;">
                 <div class="spinner"></div>
@@ -147,60 +147,77 @@
     });
 
     // ==================== NEW: UPLOAD & CONVERT TAB ====================
-    const dropZone = document.getElementById('dropZone');
-    const imageInput = document.getElementById('imageInput');
-    const processing = document.getElementById('processing');
-    const result = document.getElementById('result');
-    const uploadPreview = document.getElementById('uploadPreview');
-    const downloadBtn = document.getElementById('downloadBtn');
+   const dropZone = document.getElementById('dropZone');
+  const imageInput = document.getElementById('imageInput');
+  const processing = document.getElementById('processing');
+  const result = document.getElementById('result');
+  const uploadPreview = document.getElementById('uploadPreview');
+  const downloadBtn = document.getElementById('downloadBtn');
 
-    // Click to open file picker
-    dropZone.addEventListener('click', () => imageInput.click());
+  // Open file picker when clicking anywhere on the drop zone
+  dropZone.addEventListener('click', () => imageInput.click());
 
-    // Drag & drop effects
-    ['dragover', 'dragenter'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.add('dragover')));
-    ['dragleave', 'dragend', 'drop'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.remove('dragover')));
-
-    // Handle file selection
-    imageInput.addEventListener('change', handleFile);
-    dropZone.addEventListener('drop', e => {
-      e.preventDefault();
-      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-    });
-
-    function handleFile(file) {
-      if (!file || !file.type.startsWith('image/')) return alert('Please select an image file');
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        processing.style.display = 'block';
-        result.style.display = 'none';
-
-        // Send to new PHP endpoint
-        const formData = new FormData();
-        formData.append('image', file);
-
-        fetch('/api/image-to-coloring.php', {
-          method: 'POST',
-          body: formData
-        })
-        .then(r => r.blob())
-        .then(blob => {
-          const url = URL.createObjectURL(blob);
-          uploadPreview.src = url;
-          downloadBtn.href = url;
-          downloadBtn.download = 'coloring-page.png';
-          processing.style.display = 'none';
-          result.style.display = 'block';
-        })
-        .catch(err => {
-          console.error(err);
-          alert('Conversion failed. Try another image.');
-          processing.style.display = 'none';
-        });
-      };
-      reader.readAsDataURL(file);
+  // Visual feedback on drag-over
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+      handleFile(e.dataTransfer.files[0]);
     }
+  });
+
+  // When user selects file via picker
+  imageInput.addEventListener('change', () => {
+    if (imageInput.files.length) {
+      handleFile(imageInput.files[0]);
+    }
+  });
+
+  // Main function: upload & convert
+  function handleFile(file) {
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file');
+      return;
+    }
+
+    processing.style.display = 'block';
+    result.style.display = 'none';
+    dropZone.style.display = 'none';  // hide drop zone while processing
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    fetch('/api/image-to-coloring.php', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => {
+      if (!response.ok) throw new Error('Server error');
+      return response.blob();
+    })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      uploadPreview.src = url;
+      downloadBtn.href = url;
+      downloadBtn.download = 'my-coloring-page.png';
+
+      processing.style.display = 'none';
+      result.style.display = 'block';
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Conversion failed. Try a different image (smaller than 10MB works best).');
+      processing.style.display = 'none';
+      dropZone.style.display = 'block';
+    });
+  }
   </script>
 </body>
 </html>

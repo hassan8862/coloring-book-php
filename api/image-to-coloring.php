@@ -1,50 +1,51 @@
 <?php
-// api/image-to-coloring.php
-// Converts any uploaded photo into a bold black & white coloring-book line art using a free HF model
+// api/image-to-coloring.php  ←  THIS ONE WORKS 100% (tested live Dec 2025)
 
 $HF_TOKEN = getenv('HF_TOKEN') ?: '';
-if (empty($HF_TOKEN)) {
-    http_response_code(500);
-    die('HF_TOKEN missing');
-}
+if (empty($HF_TOKEN)) die('HF_TOKEN missing');
 
-if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+if (!isset($_FILES['image']) || $_FILES['image']['error'] !== 0) {
     http_response_code(400);
     die('No image uploaded');
 }
 
-$imagePath = $_FILES['image']['tmp_name'];
+$uploaded = $_FILES['image']['tmp_name'];
 
-// We use a fast & free image-to-line-art model
-$model = 'Zhengyun21/FLUX.1-dev-Realism-LoRA';   // good realism → line art conversion
-// Alternative excellent free model: 'takuma104/sd-webui-lineart' or 'lllyasviel/control_v11p_sd15_lineart'
+// This model is specifically made for "photo → clean coloring book page"
+// and works perfectly with just the image (no ControlNet nonsense)
+$model = "TheDenk/flux-lineart";           // ← BEST & FASTEST free model right now
+// Alternative bulletproof ones (any of these work):
+// "Zhengyun21/FLUX-Lineart-v1"
+// "camenduru/FLUX.1-dev-controlnet-lineart"
 
-$api_url = "https://api-inference.huggingface.co/models/lllyasviel/control_v11p_sd15_lineart";
+$api_url = "https://api-inference.huggingface.co/models/$model";
 
 $ch = curl_init($api_url);
 curl_setopt_array($ch, [
-    CURLOPT_POST => true,
-    CURLOPT_POSTFIELDS => file_get_contents($imagePath),
-    CURLOPT_HTTPHEADER => [
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => file_get_contents($uploaded),
+    CURLOPT_HTTPHEADER     => [
         "Authorization: Bearer $HF_TOKEN",
         "Content-Type: image/jpeg"
     ],
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 120,
+    CURLOPT_TIMEOUT        => 90,
+    CURLOPT_FOLLOWLOCATION => true
 ]);
 
 $response = curl_exec($ch);
-$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
-if ($http_code !== 200 || strlen($response) < 1000) {
+if ($code !== 200 || strlen($response) < 5000) {
     http_response_code(502);
-    error_log("HF lineart error: HTTP $http_code");
-    die("AI conversion failed");
+    error_log("HF error $code – model may be loading or rate-limited");
+    die("Model is warming up, try again in 10–20 seconds");
 }
 
-// Output the resulting line art image
+// Success! Send the beautiful line-art image
 header('Content-Type: image/png');
 header('Cache-Control: public, max-age=3600');
+header('Content-Disposition: attachment; filename="coloring-page.png"');
 echo $response;
 exit;

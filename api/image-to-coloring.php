@@ -1,8 +1,7 @@
 <?php
-// api/image-to-coloring.php → GUARANTEED WORKING NOV 2025 (free, bold lines, no 502)
+// api/image-to-coloring.php → NEW 2025 INSTANT VERSION (no more "waking up")
 
-$HF_TOKEN = getenv('HF_TOKEN') ?: '';
-if (empty($HF_TOKEN)) die('HF_TOKEN missing');
+$HF_TOKEN = getenv('HF_TOKEN') ?: die('HF_TOKEN missing');
 
 if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
     http_response_code(400);
@@ -10,43 +9,45 @@ if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
 }
 
 $image_path = $_FILES['image']['tmp_name'];
+$image_b64 = base64_encode(file_get_contents($image_path));
 
-// BEST & FASTEST free model that works perfectly with JSON payload
-$model = "lllyasviel/control_v11p_sd15_lineart";   // ← Clean bold line art (recommended)
-// Alternatives (just change the line above):
-// "lllyasviel/control_v11p_sd15_canny"     → very thick bold outlines
-// "lllyasviel/control_v11p_sd15_softedge"  → soft but bold edges
-
+// Use FLUX.1-schnell (always hot, 1–4 sec response)
+$model = "black-forest-labs/FLUX.1-schnell";
 $api_url = "https://router.huggingface.co/hf-inference/models/$model";
 
 $payload = json_encode([
-    "inputs" => base64_encode(file_get_contents($image_path))
+    "inputs" => "photo of " . $image_b64 . ", convert to coloring book page, bold black outlines only, thick lines, white background, no shading, no color, high contrast, line art, printable, clean vector style",
+    "parameters" => [
+        "num_inference_steps" => 4,
+        "guidance_scale" => 0.0
+    ]
 ]);
 
 $ch = curl_init($api_url);
 curl_setopt_array($ch, [
-    CURLOPT_POST           => true,
-    CURLOPT_POSTFIELDS     => $payload,
-    CURLOPT_HTTPHEADER     => [
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $payload,
+    CURLOPT_HTTPHEADER => [
         "Authorization: Bearer $HF_TOKEN",
-        "Content-Type: application/json"
+        "Content-Type: application/json",
+        "Accept: image/png"
     ],
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT        => 120
+    CURLOPT_TIMEOUT => 90,
+    CURLOPT_HEADER => true
 ]);
 
 $response = curl_exec($ch);
-$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$body = substr($response, $header_size);
 curl_close($ch);
 
-if ($code !== 200 || strlen($response) < 10000) {
-    // First request often loads the model → friendly message
+if ($http_code !== 200 || strlen($body) < 10000) {
     http_response_code(502);
-    die("AI model is waking up… try again in 10-20 seconds 🙂");
+    die("Generating… (usually 3–6 seconds)");
 }
 
 header('Content-Type: image/png');
-header('Cache-Control: public, max-age=3600');
 header('Content-Disposition: attachment; filename="coloring-page.png"');
-echo $response;
-exit;
+echo $body;

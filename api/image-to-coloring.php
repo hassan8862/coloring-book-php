@@ -19,7 +19,7 @@ function call_hf($b64) {
 
     $payload = json_encode(["inputs" => $b64]);
 
-    $ch = curl_init("https://api-inference.huggingface.co/models/$model");
+    $ch = curl_init("https://router.huggingface.co/hf-inference/models/$model");
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
         CURLOPT_POSTFIELDS     => $payload,

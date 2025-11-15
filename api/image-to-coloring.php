@@ -12,7 +12,7 @@ $image_path = $_FILES['image']['tmp_name'];
 $image_b64  = base64_encode(file_get_contents($image_path));
 
 // BEST MODEL FOR BOLD CLEAN LINEART (100% black & white printable)
-$model = "lllyasviel/control_v11p_sd15_lineart";
+$model = 'black-forest-labs/FLUX.1-schnell';
 
 function call_hf($b64) {
     global $model, $HF_TOKEN;

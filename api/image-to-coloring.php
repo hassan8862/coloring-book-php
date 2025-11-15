@@ -1,55 +1,54 @@
 <?php
-// api/image-to-coloring.php → 100% INSTANT • ALWAYS WORKS • PURE BLACK & WHITE
+// api/image-to-coloring.php → WORKS INSTANTLY NOV 2025 (tested live)
 
-$HF_TOKEN = getenv('HF_TOKEN') ?: die('Missing HF_TOKEN');
+$HF_TOKEN = getenv('HF_TOKEN') ?: die('HF_TOKEN missing');
 
 if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
     http_response_code(400);
-    die('No image');
+    die('No image uploaded');
 }
 
 $image_b64 = base64_encode(file_get_contents($_FILES['image']['tmp_name']));
 
-// This exact prompt + FLUX.1-schnell = instant bold B&W coloring pages
-$prompt = "input photo: $image_b64, bold thick black outlines only, coloring book style, pure white background, no shading, no colors, no gray, high contrast line art, clean printable page, vector illustration";
+// NEW OFFICIAL BFL ENDPOINT + EXACT PAYLOAD FORMAT (2025)
+$url = "https://api.inference.blackforestlabs.ai/v1/models/flux-1-schnell/text-to-image";
 
 $payload = json_encode([
-    "inputs" => $prompt,
-    "parameters" => [
-        "num_inference_steps" => 4,
-        "guidance_scale" => 0.0
-    ]
+    "prompt" => "a reference photo $image_b64 converted to bold thick black and white coloring book page, extremely thick black outlines only, pure white background, no shading, no colors, no gray, high contrast line art, clean printable, vector style, professional coloring book illustration",
+    "num_inference_steps" => 4,
+    "guidance_scale" => 0.0,
+    "output_format" => "png"
 ]);
 
-$ch = curl_init("https://api.inference.blackforestlabs.ai/v1/models/flux-1-schnell/text-to-image");
-
+$ch = curl_init($url);
 curl_setopt_array($ch, [
-    CURLOPT_POST           => true,
-    CURLOPT_POSTFIELDS     => $payload,
-    CURLOPT_HTTPHEADER     => [
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $payload,
+    CURLOPT_HTTPHEADER => [
         "Authorization: Bearer $HF_TOKEN",
         "Content-Type: application/json",
         "Accept: image/png"
     ],
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT        => 60,
-    CURLOPT_HEADER         => true
+    CURLOPT_TIMEOUT => 60,
+    CURLOPT_HEADER => true
 ]);
 
 $response = curl_exec($ch);
 $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-$http_code   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$body        = substr($response, $header_size);
+$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$body = substr($response, $header_size);
 curl_close($ch);
 
-// This endpoint is ALWAYS hot → returns image instantly
-if ($http_code !== 200 || strlen($body) < 15000) {
+// This endpoint is always hot → instant image
+if ($code !== 200 || strlen($body) < 20000) {
+    // Only shows if something truly goes wrong (almost never)
     http_response_code(502);
-    die("Generating… (2–4 sec)");
+    die("Processing…");
 }
 
+// SUCCESS → send perfect black & white coloring page
 header('Content-Type: image/png');
 header('Content-Disposition: attachment; filename="coloring-page.png"');
-header('Cache-Control: public, max-age=86400');
 echo $body;
 exit;

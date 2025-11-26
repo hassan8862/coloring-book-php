@@ -1,5 +1,5 @@
 <?php
-// api/generate.php – FINAL WORKING VERSION (FREE & FAST)
+// api/generate.php – UPGRADED FOR 32-PAGE STORYBOOKS
 
 $HF_TOKEN = getenv('HF_TOKEN') ?: '';
 if (empty($HF_TOKEN)) {
@@ -8,17 +8,24 @@ if (empty($HF_TOKEN)) {
 }
 
 $prompt = trim($_GET['prompt'] ?? '');
-$page   = max(1, (int)($_GET['page'] ?? 1));
+$page   = max(1, min(32, (int)($_GET['page'] ?? 1))); // 1 to 32 only
+$story  = trim($_GET['story'] ?? ''); // full story context
+
 if (empty($prompt)) {
     http_response_code(400);
     exit('Prompt required');
 }
 
-// === FREE MODEL: FLUX.1-schnell ===
 $model = 'black-forest-labs/FLUX.1-schnell';
 $api_url = 'https://router.huggingface.co/hf-inference/models/' . $model;
 
-$full_prompt = "$prompt, coloring book page $page, line art, bold black outlines, white background, no shading, high contrast, printable, clean, vector style";
+// Enhanced prompt for story consistency + page number
+$scene_prompt = $prompt;
+if (!empty($story)) {
+    $scene_prompt = "Page $page of 32: $prompt, part of this story: \"$story\"";
+}
+
+$full_prompt = "$scene_prompt, coloring book page, bold black outlines, white background, no shading, high contrast, clean line art, printable, detailed but not too complex for kids, vector style";
 
 $payload = [
     'inputs' => $full_prompt,
@@ -52,33 +59,13 @@ $content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 $body = substr($raw, $header_size);
 curl_close($ch);
 
-// === LOG FOR DEBUG ===
-error_log("HF Response | HTTP: $http_code | Type: $content_type | Size: " . strlen($body));
-
-// === VALIDATE RESPONSE ===
-if ($http_code !== 200) {
-    error_log("HF API ERROR: HTTP $http_code");
-    error_log("Response: " . substr($body, 0, 500));
+if ($http_code !== 200 || strpos($content_type, 'image/') === false || strlen($body) < 10000) {
     http_response_code(502);
-    exit("AI service error (HTTP $http_code)");
+    exit("AI error");
 }
 
-if (strpos($content_type, 'image/') === false) {
-    error_log("NOT AN IMAGE: $content_type");
-    error_log("Response preview: " . substr($body, 0, 200));
-    http_response_code(502);
-    exit("AI returned non-image");
-}
-
-if (strlen($body) < 10000) {
-    error_log("IMAGE TOO SMALL: " . strlen($body) . " bytes");
-    http_response_code(502);
-    exit("Generated image too small");
-}
-
-// === SEND PNG (no compression needed – FLUX is fast) ===
 header('Cache-Control: public, max-age=86400');
 header('Content-Type: image/png');
-header('Content-Disposition: attachment; filename="page-'.$page.'.png"');
+header('Content-Disposition: attachment; filename="page-'.str_pad($page, 2, '0', STR_PAD_LEFT).'.png"');
 echo $body;
 exit;

@@ -52,149 +52,120 @@
     </div>
   </div>
 
-  <script>
-    const chat = document.getElementById('chat');
-    const input = document.getElementById('promptInput');
-    const imageInput = document.getElementById('imageInput');
-    const uploadBtn = document.getElementById('uploadBtn');
+<script>
+    let storyScenes = [];
+    let generatingAll = false;
 
-    let currentChatId = Date.now();
-    let chatHistory = JSON.parse(localStorage.getItem('coloringChats') || '[]');
+    async function startStorybook(prompt) {
+        addMessage('user', prompt);
+        addMessage('bot', 'Amazing idea! I\'m planning your 32-page coloring storybook now... ✍️');
 
-    function saveChat() {
-      const existing = chatHistory.find(c => c.id === currentChatId);
-      if (existing) {
-        existing.messages = Array.from(chat.children).map(el => ({
-          type: el.classList.contains('user') ? 'user' : 'bot',
-          text: el.querySelector('div')?.innerText || '',
-          image: el.querySelector('img')?.src || null
-        }));
-        existing.title = existing.messages[0]?.text.slice(0, 30) + '...' || 'Coloring Chat';
-      } else {
-        chatHistory.push({
-          id: currentChatId,
-          title: Array.from(chat.children)[0]?.querySelector('div')?.innerText.slice(0, 30) + '...' || 'New Chat',
-          messages: []
+        const response = await fetch('/api/plan-story.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'prompt=' + encodeURIComponent(prompt)
         });
-      }
-      localStorage.setItem('coloringChats', JSON.stringify(chatHistory));
-      renderHistory();
+        const data = await response.json();
+        storyScenes = data.scenes || [];
+
+        const storyDiv = document.createElement('div');
+        storyDiv.innerHTML = `<strong>Your 32-Page Story:</strong><br><ol style="font-size:0.9em;">${storyScenes.map(s => `<li>${s}</li>`).join('')}</ol>`;
+        addMessage('bot', storyDiv.innerHTML);
+
+        addMessage('bot', 'Ready! I\'ll now generate all 32 pages one by one.<br>⏳ This will take ~2–4 minutes total.<br><button class="btn btn-success btn-sm me-2" onclick="generateAllPages()">Generate All 32 Pages Now</button> <button class="btn btn-outline-secondary btn-sm" onclick="generatePageByPage()">Or one at a time</button>');
     }
 
-    function renderHistory() {
-      const list = document.getElementById('historyList');
-      list.innerHTML = chatHistory.slice(-10).reverse().map(c => `
-        <button class="sidebar-btn" onclick="loadChat(${c.id})">
-          <i class="fas fa-book me-2"></i>${c.title}
-        </button>
-      `).join('');
-    }
+    window.generateAllPages = async function() {
+        if (generatingAll) return;
+        generatingAll = true;
+        addMessage('bot', '<div class="typing">Starting full 32-page generation... This will take 2–4 minutes ⏳</div>');
 
-    function loadChat(id) {
-      const conv = chatHistory.find(c => c.id === id);
-      if (!conv) return;
-      currentChatId = id;
-      chat.innerHTML = '';
-      conv.messages.forEach(m => addMessage(m.type, m.text, m.image));
-      document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active');
-    }
+        for (let i = 0; i < 32; i++) {
+            const pageNum = i + 1;
+            const status = document.createElement('div');
+            status.id = 'status-' + pageNum;
+            status.className = 'message bot typing';
+            status.innerHTML = `<div>Generating page ${pageNum}/32: ${storyScenes[i]}...</div>`;
+            chat.appendChild(status);
+            chat.scrollTop = chat.scrollHeight;
 
-    function addMessage(type, text = '', imageUrl = null) {
-      const msg = document.createElement('div');
-      msg.className = `message ${type}`;
-      msg.style.alignSelf = type === 'user' ? 'flex-end' : 'flex-start';
+            try {
+                const resp = await fetch(`/api/generate.php?prompt=${encodeURIComponent(storyScenes[i])}&page=${pageNum}&story=${encodeURIComponent(input.value)}&t=${Date.now()}`);
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
 
-      if (text) {
-        const txt = document.createElement('div');
-        txt.innerHTML = text.replace(/\n/g, '<br>');
-        msg.appendChild(txt);
-      }
+                chat.removeChild(status);
+                addMessage('bot', `<strong>Page ${pageNum}/32:</strong> ${storyScenes[i]}`, url);
+            } catch (e) {
+                chat.removeChild(status);
+                addMessage('bot', `Page ${pageNum} failed, retrying later...`);
+            }
+        }
+        addMessage('bot', '🎉 Your complete 32-page coloring storybook is ready!<br><a href="javascript:downloadAll()" class="btn btn-success">📦 Download All as ZIP (soon)</a>');
+        generatingAll = false;
+        saveChat();
+    };
 
-      if (imageUrl) {
-        const img = document.createElement('img');
-        img.src = imageUrl;
-        img.className = 'image-result img-fluid';
-        msg.appendChild(img);
+    window.generatePageByPage = function() {
+        let page = 1;
+        const next = () => {
+            if (page > 32) {
+                addMessage('bot', '🎉 All 32 pages completed!');
+                return;
+            }
+            const typing = document.createElement('div');
+            typing.className = 'message bot typing';
+            typing.innerHTML = `<div>Generating page ${page}/32: ${storyScenes[page-1]}... <button onclick="this.parentElement.parentElement.remove();next()" class="btn btn-sm btn-outline-primary ms-3">Skip</button></div>`;
+            chat.appendChild(typing);
 
-        const dl = document.createElement('a');
-        dl.href = imageUrl;
-        dl.download = 'coloring-page.png';
-        dl.className = 'btn btn-sm btn-success mt-2';
-        dl.innerHTML = '<i class="fas fa-download"></i> Download';
-        msg.appendChild(dl);
-      }
+            fetch(`/api/generate.php?prompt=${encodeURIComponent(storyScenes[page-1])}&page=${page}&story=${encodeURIComponent(input.value)}`)
+                .then(r => r.blob())
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    chat.removeChild(typing);
+                    addMessage('bot', `<strong>Page ${page}/32:</strong> ${storyScenes[page-1]}`, url);
+                    page++;
+                    setTimeout(next, 1000); // auto continue
+                });
+        };
+        next();
+    };
 
-      chat.appendChild(msg);
-      chat.scrollTop = chat.scrollHeight;
-    }
-
+    // Modified send function
     function sendPrompt(prompt) {
-      if (!prompt.trim()) return;
-      addMessage('user', prompt);
-      input.value = '';
+        if (!prompt.trim()) return;
+        input.value = '';
+        if (prompt.toLowerCase().includes('32') || prompt.toLowerCase().includes('full book') || prompt.length > 30) {
+            startStorybook(prompt);
+        } else {
+            // Old single-page behavior
+            addMessage('user', prompt);
+            const typing = document.createElement('div');
+            typing.className = 'message bot typing';
+            typing.innerHTML = '<div>Generating your coloring page... <i class="fas fa-spinner fa-spin"></i></div>';
+            chat.appendChild(typing);
 
-      const typing = document.createElement('div');
-      typing.className = 'message bot typing';
-      typing.innerHTML = '<div>Generating coloring page... <i class="fas fa-spinner fa-spin"></i></div>';
-      chat.appendChild(typing);
-      chat.scrollTop = chat.scrollHeight;
-
-      fetch(`/api/generate.php?prompt=${encodeURIComponent(prompt)}&page=1&t=${Date.now()}`)
-        .then(r => r.blob())
-        .then(blob => {
-          const url = URL.createObjectURL(blob);
-          chat.removeChild(typing);
-          addMessage('bot', 'Here’s your coloring page!', url);
-          saveChat();
-        })
-        .catch(() => {
-          chat.removeChild(typing);
-          addMessage('bot', 'Sorry, the AI is still waking up. Try again in 10 seconds! 😊');
-        });
+            fetch(`/api/generate.php?prompt=${encodeURIComponent(prompt)}&page=1&t=${Date.now()}`)
+                .then(r => r.blob())
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    chat.removeChild(typing);
+                    addMessage('bot', 'Here’s your coloring page!', url);
+                    saveChat();
+                });
+        }
     }
 
-    function handleImage(file) {
-      addMessage('user', `Uploaded: ${file.name}`);
-      const typing = document.createElement('div');
-      typing.className = 'message bot typing';
-      typing.innerHTML = '<div>Converting to coloring page... (10–15s) <i class="fas fa-spinner fa-spin"></i></div>';
-      chat.appendChild(typing);
-
-      const fd = new FormData();
-      fd.append('image', file);
-
-      fetch('/api/image-to-coloring.php', { method: 'POST', body: fd })
-        .then(r => r.blob())
-        .then(blob => {
-          const url = URL.createObjectURL(blob);
-          chat.removeChild(typing);
-          addMessage('bot', 'Converted! Ready to color 🎨', url);
-          saveChat();
-        })
-        .catch(() => {
-          chat.removeChild(typing);
-          addMessage('bot', 'Model is loading... please try again in 10–20 seconds!');
-        });
-    }
-
-    // Events
+    // Rest of your existing event listeners...
     input.addEventListener('keypress', e => { if (e.key === 'Enter') sendPrompt(input.value); });
     document.getElementById('newChat').addEventListener('click', () => {
-      currentChatId = Date.now();
-      chat.innerHTML = '<div class="text-center text-muted mt-5"><h4>👋 Ask me to draw anything as a coloring page!</h4><p>Try: "cute baby dragon", "spooky Halloween pumpkin", or upload a photo!</p></div>';
-      document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('newChat').classList.add('active');
+        currentChatId = Date.now();
+        chat.innerHTML = '<div class="text-center text-muted mt-5"><h4>Describe your 32-page coloring storybook!</h4><p>Examples:<br>• A brave knight rescuing a princess<br>• Baby dinosaur\'s first day at school<br>• Mermaid adventure under the sea</p></div>';
+        storyScenes = [];
     });
 
-    uploadBtn.addEventListener('click', () => imageInput.click());
-    imageInput.addEventListener('change', () => {
-      if (imageInput.files[0]) handleImage(imageInput.files[0]);
-    });
-
-    // Init
     renderHistory();
     document.getElementById('newChat').click();
-  </script>
+</script>
 </body>
 </html>

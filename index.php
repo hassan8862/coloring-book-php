@@ -8,7 +8,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
     :root { --primary: #10a37f; --bg: #0d1117; --text: #c9d1d9; --border: #30363d; --user-bg: #238636; }
     body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; height: 100vh; margin: 0; display: flex; flex-direction: column; overflow: hidden; }
@@ -161,7 +161,7 @@
         <div class="download-controls">
           <strong>All ${totalPages} pages generated!</strong><br><br>
           <button class="btn btn-success me-2" onclick="downloadSelected('zip')"><i class="fas fa-file-zip"></i> Download Selected as ZIP</button>
-          <button class="btn btn-info me-2" onclick="downloadSelected('pdf')"><i class="fas fa-file-pdf"></i> Download Selected as PDF</button>
+        
           <button class="btn btn-outline-light btn-sm" onclick="selectAll(true)">Select All</button>
           <button class="btn btn-outline-light btn-sm" onclick="selectAll(false)">Deselect All</button>
         </div>
@@ -185,31 +185,7 @@
         const blob = await zip.generateAsync({ type: 'blob' });
         saveAs(blob, `ColorBot-Selected-${selected.length}-Pages.zip`);
         addMessage('bot', 'Selected pages downloaded as ZIP!');
-      } else if (type === 'pdf') {
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF();
-        selected.forEach((img, i) => {
-          if (i > 0) pdf.addPage();
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          const image = new Image();
-          image.src = URL.createObjectURL(img.blob);
-          // Wait for image load
-          const loadPromise = new Promise(r => image.onload = r);
-          loadPromise.then(() => {
-            canvas.width = image.width; canvas.height = image.height;
-            ctx.drawImage(image, 0, 0);
-            const data = canvas.toDataURL('image/png');
-            const ratio = Math.min(180 / image.width, 260 / image.height);
-            pdf.addImage(data, 'PNG', 15, 30, image.width * ratio, image.height * ratio);
-            pdf.setFontSize(12);
-            pdf.text(`Page ${img.page}`, 15, 20);
-          });
-        });
-        // Simple sync version (good enough for most cases)
-        setTimeout(() => pdf.save(`ColorBot-Selected-${selected.length}-Pages.pdf`), 1000);
-        addMessage('bot', 'Selected pages downloaded as PDF!');
-      }
+      } 
     };
 
     function sendPrompt(text) {

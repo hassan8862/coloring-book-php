@@ -127,7 +127,7 @@
         </div>
         <div class="mt-3">
           <button class="btn btn-success btn-sm me-2" onclick="generateAll()">Generate All ${totalPages} Pages</button>
-          <button class="btn btn-outline-light btn-sm" onclick="generateOneByOne()">One at a Time</button>
+          
         </div>
       `);
     }
@@ -168,7 +168,7 @@
       `);
     };
 
-    window.generateOneByOne = () => { /* same as before, omitted for brevity */ }
+    
 
     window.selectAll = (state) => {
       document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = state);

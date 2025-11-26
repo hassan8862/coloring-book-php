@@ -37,7 +37,7 @@ if ($api_key) {
             "Content-Type: application/json"
         ],
         CURLOPT_POSTFIELDS => json_encode([
-            'model' => 'llama-3.1-70b-versatile',
+            'model' => 'llama-3.3-70b-versatile',
             'messages' => [['role' => 'user', 'content' => $decide_prompt]],
             'temperature' => 0.3,
             'max_tokens' => 5

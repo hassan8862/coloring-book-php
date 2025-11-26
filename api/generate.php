@@ -1,6 +1,6 @@
 <?php
 // api/generate.php – UPGRADED FOR 32-PAGE STORYBOOKS
-
+error_reporting(0);
 $HF_TOKEN = getenv('HF_TOKEN') ?: '';
 if (empty($HF_TOKEN)) {
     http_response_code(500);

@@ -111,6 +111,7 @@
       padding-bottom: env(safe-area-inset-bottom, 12px);
       background: rgba(13, 17, 23, 0.95);
       backdrop-filter: blur(10px);
+      padding-bottom: 30px;
     }
 
     #prompt-input {
@@ -133,10 +134,10 @@
     /* Floating Send Button */
     .send-btn {
       position: fixed;
-      bottom: 10px;
-      right: 20px;
-      width: 56px;
-      height: 56px;
+      bottom: 30px;
+      right: 12px;
+      width: 55px;
+      height: 55px;
       border-radius: 50%;
       background: var(--primary);
       color: white;
@@ -252,7 +253,7 @@
       .bubble { padding: 0.8rem 1rem; font-size: 0.93rem; }
       .message { gap: 10px; }
       .avatar { width: 36px; height: 36px; font-size: 1.1rem; }
-      .send-btn { width: 52px; height: 52px; bottom: 5px; right: 16px; }
+      .send-btn { width: 52px; height: 52px; bottom: 31px; right: 10px; }
       .example-btn { padding: 10px 16px; font-size: 0.9rem; }
     }
 

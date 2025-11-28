@@ -133,7 +133,7 @@
     /* Floating Send Button */
     .send-btn {
       position: fixed;
-      bottom: 24px;
+      bottom: 10px;
       right: 20px;
       width: 56px;
       height: 56px;
@@ -252,7 +252,7 @@
       .bubble { padding: 0.8rem 1rem; font-size: 0.93rem; }
       .message { gap: 10px; }
       .avatar { width: 36px; height: 36px; font-size: 1.1rem; }
-      .send-btn { width: 52px; height: 52px; bottom: 20px; right: 16px; }
+      .send-btn { width: 52px; height: 52px; bottom: 5px; right: 16px; }
       .example-btn { padding: 10px 16px; font-size: 0.9rem; }
     }
 
